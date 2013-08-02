@@ -1,0 +1,6 @@
+pindel-0.2.4t/test
+
+*.swp
+*.d.*
+*.pyc
+*~
