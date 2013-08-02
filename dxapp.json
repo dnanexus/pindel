@@ -153,9 +153,9 @@
       "name": "num_threads_per_instance",
       "label": "Number of Threads",
       "class": "int",
-      "default": 2,
+      "default": 1,
       "group": "App Settings",
-      "help": "The number threads per instance that Pindel will run. More threads assures lower runtime. App is run on DNAnexus default instance types (dx_m1.large) which has 2 processors. If user specifies to run on different instance types, user can change this input"
+      "help": "The number threads per instance that Pindel will run. More threads assures lower runtime but will not guarantee same results."
     },    
     {
       "name": "report_interchrom_events",

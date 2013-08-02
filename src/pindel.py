@@ -523,7 +523,7 @@ def main(**kwargs):
     if "chromosome" in kwargs:
         chrom = kwargs["chromosome"]
     
-    if "chromosome" in kwargs or kwargs["num_instances"] == 1:
+    if "chromosome" in kwargs or kwargs["num_instances"] == 1 or kwargs["report_interchrom_events"]:
         #Don't spawn subjobs, work straight in main job
         command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
         output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
