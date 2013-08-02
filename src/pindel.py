@@ -408,8 +408,8 @@ def UploadPindelOutputs(kwargs, output_path):
     #print "Uploading Pindel detected interchromosomal results original file"
     #interchrom_orig_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results_orig"], name=prefix+"_"+suffix["interchrom_results_orig"])
     
-    print "Uploading Pindel dectected interchromosomal results final file"
-    interchrom_final_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results_final"], name=prefix+"_"+suffix["interchrom_results_final"])
+    print "Uploading Pindel dectected interchromosomal results file"
+    interchrom_results_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results"], name=prefix+"_"+suffix["interchrom_results"])
     
     print "Uploading Pindel detected unassigned breakpoints file"
     breakpoint_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["breakpoints"], name=prefix+"_"+suffix["breakpoints"])
@@ -421,7 +421,7 @@ def UploadPindelOutputs(kwargs, output_path):
                    "large_inserts" : dxpy.dxlink(large_insert_fh),
                    "discordant_read_pair" : dxpy.dxlink(discordant_rp_fh),
                    # "interchrom_results_orig" : dxpy.dxlink(interchrom_orig_fh),
-                   "interchrom_results_final" : dxpy.dxlink(interchrom_final_fh),
+                   "interchrom_results" : dxpy.dxlink(interchrom_results_fh),
                    "breakpoints" : dxpy.dxlink(breakpoint_fh) 
                    }    
     if kwargs["report_close_mapped_reads"] or kwargs["report_only_close_mapped_reads"]:
@@ -488,7 +488,7 @@ def main(**kwargs):
                                   "breakpoints" : 'BP',
                                   "discordant_read_pair": 'RP',
                                   #"interchrom_results_orig": 'INT',
-                                  "interchrom_results_final": 'INT_final',
+                                  "interchrom_results": 'INT_final',
                                   "breakdancer_outputs": 'BD',
                                   "close_mapped_reads": 'CloseEndMapped'} 
     bam_config_fn = "bam_config.txt"
@@ -546,7 +546,7 @@ def main(**kwargs):
                        "breakpoints" : {"job": postprocess_job.get_id(), "field": "breakpoints"},
                        "discordant_read_pair" : {"job": postprocess_job.get_id(), "field": "discordant_read_pair"},
                        #"interchrom_results_orig" : {"job": postprocess_job.get_id(), "field": "interchrom_results_orig"},
-                       "interchrom_results_final" : {"job": postprocess_job.get_id(), "field": "interchrom_results_final"},
+                       "interchrom_results" : {"job": postprocess_job.get_id(), "field": "interchrom_results"},
                        }
         if kwargs["report_close_mapped_reads"] or kwargs["report_only_close_mapped_reads"]:
             app_outputs["close_mapped_reads"] = {"job": postprocess_job.get_id(), "field": "close_mapped_reads"}

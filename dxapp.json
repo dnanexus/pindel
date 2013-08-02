@@ -261,16 +261,10 @@
       "label": "Discordant Read Pair",
       "class": "file",
       "help": "Output will be empty IF report_read_pair (app input) is set to false"
-    },
+    }, 
     {
-      "name": "interchrom_results_orig",
-      "label": "Interchromosomal Results - Original",
-      "class": "file",
-      "help": "Output will be empty if report_interchrom_events (app input) is set to false."
-    },      
-    {
-      "name": "interchrom_results_final",
-      "label": "Interchromosomal Results - Final",
+      "name": "interchrom_results",
+      "label": "Interchromosomal Results",
       "class": "file",
       "help": "Output will be empty if report_interchrom_events (app input) is set to false."
     }, 
