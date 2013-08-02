@@ -2,7 +2,6 @@
 # DNAnexus wrapper for pindel0.2.4t
 # App version 0.0.1
 
-from collections import defaultdict
 import os, subprocess, time, datetime, re
 import dxpy
 
@@ -207,7 +206,7 @@ def DownloadSortIndex(bam_ids, num_threads):
         print stream_command
         subprocess.check_call(stream_command, shell=True)
         
-        command = "samtools -@ {n} index {in_bam}".format(n=num_threads, in_bam=name)
+        command = "samtools index {in_bam}".format(in_bam=name)
         print command
         subprocess.check_call(command, shell=True)
         
@@ -308,11 +307,16 @@ def BuildPindelCommand(kwargs, chrom, input_fn, is_pindel_input_type=False):
         command_args.append("-l {option}".format(option=kwargs["report_long_insertions"]))
         command_args.append("-k {option}".format(option=kwargs["report_breakpoints"]))
         command_args.append("-s {option}".format(option=kwargs["report_close_mapped_reads"]))     
-       
-    if "pindel_advanced_command_line_options" in kwargs:
-        advanced_command = kwargs["pindel_advanced_command_line_options"]
+
+    if "breakdancer_calls_file" in kwargs:
+        breakdancer_fn = DownloadFilesFromArray([kwargs["breakdancer_calls_file"]["$dnanexus_link"]])[0]
+        print breakdancer_fn
+        command_args.append("-b {option}".format(option=breakdancer_fn))
+            
+    if "pindel_command_line" in kwargs:
+        advanced_command = kwargs["pindel_command_line"]
         if advanced_command.startswith("pindel"):
-            advanced_command = advanced_command.rstrip("pindel")
+            advanced_command = advanced_command.replace("pindel", "")
         command_args.append(advanced_command)
  
     command = " ".join(command_args)
@@ -364,19 +368,20 @@ def RunPindel(kwargs, pindel_command, output_path):
         for type, suffix in kwargs["variant_suffixes"].iteritems():
             filename = output_path + "_" + suffix
             print "\tWriting " + filename
-            with open(filename, 'w') as fh: 
+            with open(filename, 'w') as fh:
                 fh.write("")
-    
+    '''
     if not kwargs["report_interchrom_events"]:
         print "\nDid not report interchromosomal events, writing empty file for interchrom results original"
-            filename = output_path + "_" + kwargs["variant_suffixes"]["interchrom_results_orig"]
-            with open(filename, 'w') as fh: 
-                fh.write("")
-                    
+        filename = output_path + "_" + kwargs["variant_suffixes"]["interchrom_results_orig"]
+        with open(filename, 'w') as fh: 
+            fh.write("")
+    '''
+                                
     return output_path
 
 def UploadPindelOutputs(kwargs, output_path):
-    prefix = kwargs["prefix"]
+    prefix = kwargs["output_prefix"]
     output_folder = output_path.split("/")[0]
     print os.listdir(output_folder)
     
@@ -400,8 +405,8 @@ def UploadPindelOutputs(kwargs, output_path):
     print "Uploading Pindel detected discordant read pairs file"
     discordant_rp_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["discordant_read_pair"], name=prefix+"_"+suffix["discordant_read_pair"])
     
-    print "Uploading Pindel detected interchromosomal results original file"
-    interchrom_orig_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results_orig"], name=prefix+"_"+suffix["interchrom_results_orig"])
+    #print "Uploading Pindel detected interchromosomal results original file"
+    #interchrom_orig_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results_orig"], name=prefix+"_"+suffix["interchrom_results_orig"])
     
     print "Uploading Pindel dectected interchromosomal results final file"
     interchrom_final_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["interchrom_results_final"], name=prefix+"_"+suffix["interchrom_results_final"])
@@ -415,7 +420,7 @@ def UploadPindelOutputs(kwargs, output_path):
                    "tandem_duplications" : dxpy.dxlink(tandem_duplication_fh), 
                    "large_inserts" : dxpy.dxlink(large_insert_fh),
                    "discordant_read_pair" : dxpy.dxlink(discordant_rp_fh),
-                   "interchrom_results_orig" : dxpy.dxlink(interchrom_orig_fh),
+                   # "interchrom_results_orig" : dxpy.dxlink(interchrom_orig_fh),
                    "interchrom_results_final" : dxpy.dxlink(interchrom_final_fh),
                    "breakpoints" : dxpy.dxlink(breakpoint_fh) 
                    }    
@@ -423,10 +428,12 @@ def UploadPindelOutputs(kwargs, output_path):
         print "Uploading Pindel detected Close End Mapped file"
         close_mapped_reads_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["close_mapped_reads"], name=prefix+"_"+suffix["close_mapped_reads"])
         app_outputs["close_mapped_reads"] = dxpy.dxlink(close_mapped_reads_fh)
-    if kwargs["breakdancer_calls_file"]:
-        print "Uploading Confirmed Breakdancer Outputs file"
-        breakdancer_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["breakdancer"], name=prefix+"_"+suffix["breakdancer"])
-        app_outputs["close_mapped_reads"] = dxpy.dxlink(close_mapped_reads_fh)
+    
+    # Currently "pindel -Q breakdancer_output_fn" option causes pindel to segfault
+    #if "breakdancer_calls_file" in kwargs:
+    #    print "Uploading Confirmed Breakdancer Outputs file"
+    #    breakdancer_fh = dxpy.upload_local_file(filename=output_path+"_"+suffix["breakdancer_outputs"], name=prefix+"_"+suffix["breakdancer_outputs"])
+    #    app_outputs["breakdancer_outputs"] = dxpy.dxlink(breakdancer_fh)
         
     return app_outputs
 
@@ -480,9 +487,9 @@ def main(**kwargs):
                                   "inversions" : 'INV',
                                   "breakpoints" : 'BP',
                                   "discordant_read_pair": 'RP',
-                                  "interchrom_results_orig": 'INT',
+                                  #"interchrom_results_orig": 'INT',
                                   "interchrom_results_final": 'INT_final',
-                                  "breakdancer": 'BD',
+                                  "breakdancer_outputs": 'BD',
                                   "close_mapped_reads": 'CloseEndMapped'} 
     bam_config_fn = "bam_config.txt"
     
@@ -510,7 +517,7 @@ def main(**kwargs):
             bam_names = DownloadFilesFromArray(bam_ids)
             bam_names, bam_idx_names = IndexBams(bam_names)
         else:
-            bam_names, bam_idx_names = DownloadSortIndex(bam_ids) 
+            bam_names, bam_idx_names = DownloadSortIndex(bam_ids=bam_ids, num_threads=kwargs["num_threads_per_instance"]) 
     
     chrom = "ALL"
     if "chromosome" in kwargs:
@@ -523,13 +530,11 @@ def main(**kwargs):
         app_outputs = UploadPindelOutputs(kwargs, output_path)
        
         if kwargs["export_vcf"]:
-            vcf_dxlink = ExportVCF(kwargs, ref_fn= output_path)
+            vcf_dxlink = ExportVCF(kwargs, output_path=output_path)
             if vcf_dxlink != None: 
                 app_outputs["vcf"] = vcf_dxlink
-
     else: 
         subjob_ids = SplitBamForSubjobs(kwargs, bam_names, bam_config_fn)
-        
         postprocess_inputs = {"subjob_outputs": [job.get_output_ref("subjob_output") for job in subjob_ids], "kwargs": kwargs}
         postprocess_job = dxpy.new_dxjob(fn_input = postprocess_inputs, fn_name = "postprocess")
         
@@ -540,28 +545,28 @@ def main(**kwargs):
                        "inversions" : {"job": postprocess_job.get_id(), "field": "inversions"},
                        "breakpoints" : {"job": postprocess_job.get_id(), "field": "breakpoints"},
                        "discordant_read_pair" : {"job": postprocess_job.get_id(), "field": "discordant_read_pair"},
-                       "interchrom_results_orig" : {"job": postprocess_job.get_id(), "field": "interchrom_results_orig"},
+                       #"interchrom_results_orig" : {"job": postprocess_job.get_id(), "field": "interchrom_results_orig"},
                        "interchrom_results_final" : {"job": postprocess_job.get_id(), "field": "interchrom_results_final"},
                        }
         if kwargs["report_close_mapped_reads"] or kwargs["report_only_close_mapped_reads"]:
             app_outputs["close_mapped_reads"] = {"job": postprocess_job.get_id(), "field": "close_mapped_reads"}
         if kwargs["export_vcf"]:
             app_outputs["vcf"] = {"job": postprocess_job.get_id(), "field": "vcf"}
-        if kwargs["breakdancer_calls_file"]:
+        if "breakdancer_calls_file" in kwargs:
             app_outputs["breakdancer_outputs"] = {"job": postprocess_job.get_id(), "field": "breakdancer_outputs"}
     
     dxlinks = []
     if need_to_sort and not kwargs["assume_sorted"]:     
         for bam in bam_names:
-            uploaded_bam = dxpy.upload_local_file(bam, "name"=bam.rstrip('bam')+"_sorted.bam")
+            uploaded_bam = dxpy.upload_local_file(bam, name=bam.rstrip('.bam')+"_sorted.bam")
             dxlinks.append(dxpy.dxlink(uploaded_bam))
         for idx in bam_idx_names:
-            uploaded_idx = dxpy.upload_local_file(idx, "name"=idx,rstrip('bam.bai')+"_sorted.bam.bai")
+            uploaded_idx = dxpy.upload_local_file(idx, name=idx.rstrip('.bam.bai')+"_sorted.bam.bai")
             dxlinks.append(dxpy.dxlink(uploaded_idx))
         app_outputs["sortedbam_and_index_files"] = dxlinks
     elif need_to_sort and kwargs["assume_sorted"]: 
         for idx in bam_idx_names:
-            uploaded_idx = dxpy.upload_local_file(idx, "name"=idx,rstrip('bam.bai')+"_sorted.bam.bai")
+            uploaded_idx = dxpy.upload_local_file(idx, name=idx.rstrip('.bam.bai')+"_sorted.bam.bai")
             dxlinks.append(dxpy.dxlink(uploaded_idx))
         app_outputs["sortedbam_and_index_files"] = dxlinks
         
@@ -615,9 +620,7 @@ def postprocess(**inputs):
     for type, fn in app_output_fn.iteritems():
         out_fn = fn
         if type in need_to_renumber:
-            suffix = variant_suffixes[type]
-            print fn + "\t" + suffix
-            out_fn = RenumberMergedOutput(fn, suffix, fn+"_renumbered") 
+            out_fn = RenumberMergedOutput(fn, fn+"_renumbered") 
         print "\nUploading {file} as {fn}".format(file=out_fn, fn=fn) 
         postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn, name=fn))
     

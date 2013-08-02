@@ -219,7 +219,7 @@
       "help": "If true, Pindel will not search for SVs and only report reads of which only one end (the one closest to the mapped read of the paired-end read) could be mapped (the output file can then be used as an input file for another run of pindel, which may save size if you need to transfer files). Other files will be outputted as empty files."
     },
     {
-      "name": "pindel_advanced_command_line_options",
+      "name": "pindel_command_line",
       "label": "Pindel Advanced Command Line Options",
       "class": "string",
       "optional": true,
@@ -308,7 +308,7 @@
       "class": "array:file",
       "optional": true,
       "help": "If app sorts and indexes BAM files, will upload BAM Index(es) [and sorted BAM(s) if assume_sorted=False] to platform for use in future analyses."
-    },      
+    }      
   ],
   "runSpec": {
     "interpreter": "python2.7",
