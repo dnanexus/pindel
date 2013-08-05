@@ -11,42 +11,42 @@ This app implements the Pindel tool (version 0.2.4t) for detection of structural
 This app uses Pindel v.0.2.4t and Samtools v.0.1.19
 
 ##Pindel Help
-Pindel version 0.2.5a, July 2 2013.
+Pindel version 0.2.4t, August 13 2012.
 
 Program:   pindel (detection of indels and structural variations)
-Pindel version 0.2.5a, July 2 2013.
-Contact:   Kai Ye <kye@genome.wustl.edu>
+Pindel version 0.2.4t, August 13 2012.
+Contact:   Kai Ye <k.ye@lumc.nl>
 
 Usage:     pindel -f <reference.fa> -p <pindel_input>
            [and/or -i bam_configuration_file]
            -c <chromosome_name> -o <prefix_for_output_file>
 
 Required parameters:
-           -f/--fasta (provided by DNANEXUS APP INPUTS)
+           -f/--fasta
            the reference genome sequences in fasta format 
 
-           -p/--pindel-file (provided by DNANEXUS APP INPUTS) 
+           -p/--pindel-file
            the Pindel input file; either this, a pindel configuration file 
            (consisting of multiple pindel filenames) or a bam configuration file 
            is required 
 
-           -i/--config-file (provided by DNANEXUS APP INPUTS)
+           -i/--config-file
            the bam config file; either this, a pindel input file, or a pindel 
            config file is required. Per line: path and file name of bam, insert 
            size and sample tag.     For example: /data/tumour.bam  400  tumour 
 
-           -o/--output-prefix (provided by DNANEXUS APP INPUTS)
+           -o/--output-prefix
            Output prefix; 
 
 
 Optional parameters:
-           -P/--pindel-config-file (not supported)
+           -P/--pindel-config-file
            the pindel config file, containing the names of all Pindel files that 
            need to be sampled; either this, a bam config file or a pindel input 
            file is required. Per line: path and file name of pindel input. 
            Example: /data/tumour.txt 
 
-           -c/--chromosome (provided by DNANEXUS APP INPUTS)
+           -c/--chromosome
            Which chr/fragment. Pindel will process reads for one chromosome each 
            time. ChrName must be the same as in reference sequence and in read 
            file. '-c ALL' will make Pindel loop over all chromosomes. The search 
@@ -56,13 +56,10 @@ Optional parameters:
            indels in the range between and including the bases at position 
            5,000,000 and 15,000,000 = [5M, 15M]. (default ALL) 
 
-           -h/--help (not supported)
+           -h/--help
            show the command line options of Pindel 
 
-           -R/--RP
-           search for discordant read-pair to improve sensitivity (default true) 
-
-           -T/--number_of_threads (provided by DNANEXUS APP INPUTS)
+           -T/--number_of_threads
            the number of threads Pindel will use (default 1). 
 
            -x/--max_range_index
@@ -71,96 +68,55 @@ Optional parameters:
            computational cost and memory requirements increase, as does the rate 
            of false positives. 1=128, 2=512, 3=2,048, 4=8,092, 5=32,368, 
            6=129,472, 7=517,888, 8=2,071,552, 9=8,286,208. (maximum 9, default 
-           4) 
+           5) 
 
            -w/--window_size
            for saving RAM, divides the reference in bins of X million bases and 
-           only analyzes the reads that belong in the current bin, (default 5 
-           (=5 million)) 
+           only analyzes the reads that belong in the current bin, (default 10 
+           (=10 million)) 
 
            -e/--sequencing_error_rate
-           the expected fraction of sequencing errors (default 0.01) 
-
-           -E/--sensitivity
-           Pindel only reports reads if they can be fit around an event within a 
-           certain number of mismatches. If the fraction of sequencing errors is 
-           0.01, (so we'd expect a total error rate of 0.011 since on average 1 
-           in 1000 bases is a SNP) and pindel calls a deletion, but there are 4 
-           mismatched bases in the new fit of the pindel read (100 bases) to the 
-           reference genome, Pindel would calculate that with an error rate of 
-           0.01 (=0.011 including SNPs) the chance that there are 0, 1 or 2 
-           mismatched bases in the reference genome is 90%. Setting -E to .90 
-           (=90%) will thereforethrow away all reads with 3 or more mismatches, 
-           even though that means that you throw away 1 in 10 valid reads. 
-           Increasing this parameter to say 0.99 will increase the sensitivity 
-           of pindel though you may get more false positives, decreasing the 
-           parameter ensures you only get very good matches but pindel may not 
-           find as many events. (default 0.95) 
+           the expected fraction of sequencing errors (default 0.03) 
 
            -u/--maximum_allowed_mismatch_rate
-           Only reads with more than this fraction of mismatches than the 
-           reference genome will be considered as harboring potential SVs. 
-           (default 0.02) 
+           Only reads with no less than this fraction of mismatches than the 
+           reference genome will be considered. (default 0.05) 
 
-           -n/--NM
-           the minimum number of edit distance between reads and reference 
-           genome (default 2). reads at least NM edit distance (>= NM) will be 
-           realigned 
-
-           -r/--report_inversions (provided by DNANEXUS APP INPUTS)
+           -r/--report_inversions
            report inversions (default true) 
 
-           -t/--report_duplications (provided by DNANEXUS APP INPUTS)
+           -t/--report_duplications
            report tandem duplications (default true) 
 
-           -l/--report_long_insertions (provided by DNANEXUS APP INPUTS)
+           -l/--report_long_insertions
            report insertions of which the full sequence cannot be deduced 
            because of their length (default true) 
 
-           -k/--report_breakpoints (provided by DNANEXUS APP INPUTS)
+           -k/--report_breakpoints
            report breakpoints (default true) 
 
-           -s/--report_close_mapped_reads (provided by DNANEXUS APP INPUTS)
+           -s/--report_close_mapped_reads
            report reads of which only one end (the one closest to the mapped 
            read of the paired-end read) could be mapped. (default false) 
 
-           -S/--report_only_close_mapped_reads (provided by DNANEXUS APP INPUTS)
+           -S/--report_only_close_mapped_reads
            do not search for SVs, only report reads of which only one end (the 
            one closest to the mapped read of the paired-end read) could be 
            mapped (the output file can then be used as an input file for another 
            run of pindel, which may save size if you need to transfer files). 
            (default false) 
 
-           -I/--report_interchromosomal_events (provided by DNANEXUS APP INPUTS)
-           search for interchromosomal events. Note: will require the computer 
-           to have at least 4 GB of memory (default true) 
-
-           -C/--IndelCorrection
-           search for consensus indels to correct contigs (default false) 
-
-           -N/--NormalSamples
-           Turn on germline filtering, less sensistive and you may miss somatic 
-           calls (default false) 
-
-           -b/--breakdancer (provided by DNANEXUS APP INPUTS)
+           -b/--breakdancer
            Pindel is able to use calls from other SV methods such as BreakDancer 
            to further increase sensitivity and specificity.                    
            BreakDancer result or calls from any methods must in the format:   
            ChrA LocA stringA ChrB LocB stringB other 
 
-           -j/--include
-           If you want Pindel to process a set of regions, please provide a bed 
-           file here: chr start end 
-
-           -J/--exclude
-           If you want Pindel to skip a set of regions, please provide a bed 
-           file here: chr start end 
-
            -a/--additional_mismatch
            Pindel will only map part of a read to the reference genome if there 
            are no other candidate positions with no more than the specified 
-           number of mismatches position. The bigger the value, the more 
-           accurate but less sensitive. (minimum value 1, default value 1) 
+           number of mismatches position. The bigger tha value, the more 
+           accurate but less sensitive. (default value 1) 
 
            -m/--min_perfect_match_around_BP
            at the point where the read is split into two, there should at least 
@@ -180,8 +136,8 @@ Optional parameters:
            sufficiently long strings of bases (default 100) 
 
            -A/--anchor_quality
-           the minimal mapping quality of the reads Pindel uses as anchor If you 
-           only need high confident calls, set to 30 or higher(default 20) 
+           the minimal mapping quality of the reads Pindel uses as anchor 
+           (default 20) 
 
            -M/--minimum_support_for_event
            Pindel only calls events which have this number or more supporting 
@@ -195,9 +151,9 @@ Optional parameters:
             Example: DEL chr1 10000 50 chr2 20000 100 
 
            -g/--genotyping
-           gentype variants if -i is also used. 
+           gentype variants if -i is also turn true. 
 
-           -Q/--output_of_breakdancer_events (not supported -- input causes pindel v.0.2.5 to segfault)
+           -Q/--output_of_breakdancer_events
            If breakdancer input is used, you can specify a filename here to 
            write the confirmed breakdancer events with their exact breakpoints 
            to The list of BreakDancer calls with Pindel support information. 
@@ -210,35 +166,5 @@ Optional parameters:
            Specifies a file to write Pindel's log to (default: no logfile, log 
            is written to the screen/stdout) 
 
-           -Y/--Ploidy
-           a file with Ploidy information per chr for genotype. per line: 
-           ChrName Ploidy. For example, chr1 2 
-
-           -q/--detect_DD
-           Flag indicating whether to detect dispersed duplications. (default: 
-           false) 
-
-           /--MAX_DD_BREAKPOINT_DISTANCE
-           Maximum distance between dispersed duplication breakpoints to assume 
-           they refer to the same event. (default: 350) 
-
-           /--MAX_DISTANCE_CLUSTER_READS
-           Maximum distance between reads for them to provide evidence for a 
-           single breakpoint for dispersed duplications. (default: 100) 
-
-           /--MIN_DD_CLUSTER_SIZE
-           Minimum number of reads needed for calling a breakpoint for dispersed 
-           duplications. (default: 3) 
-
-           /--MIN_DD_BREAKPOINT_SUPPORT
-           Minimum number of split reads for calling an exact breakpoint for 
-           dispersed duplications. (default: 3) 
-
-           /--MIN_DD_MAP_DISTANCE
-           Minimum mapping distance of read pairs for them to be considered 
-           discordant. (default: 8000) 
-
-           /--DD_REPORT_DUPLICATION_READS
-           Report discordant sequences and positions for mates of reads mapping 
-           inside dispersed duplications. (default: false) 
-
+           -q/--detect_MEI
+           Flag indicating whether to search for mobile element insertions. 

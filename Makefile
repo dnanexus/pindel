@@ -1,5 +1,5 @@
 SV=0.1.19
-PV=0.2.5a
+PV=0.2.4t
 
 all: samtools pindel
 
