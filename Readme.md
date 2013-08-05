@@ -1,20 +1,19 @@
 <!-- dx-header -->
-# Pindel (DNAnexus Platform App
+# Pindel v.0.2.5a1 (DNAnexus Platform App)
 
 This is the source code for an app that runs on the DNAnexus Platform.
 For more information about how to run or modify it, see
 https://wiki.dnanexus.com/.
 <!-- /dx-header -->
-This app implements the Pindel tool (version 0.2.4t) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc). For more information about the Pindel tool, please visit http://gmt.genome.wustl.edu/pindel/0.2.4/index
-
+This app implements the Pindel tool (version 0.2.5a1) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc). 
 ##Versions
-This app uses Pindel v.0.2.4t and Samtools v.0.1.19
+This app uses Pindel v.0.2.5a1 and Samtools v.0.1.19
 
 ##Pindel Help
-Pindel version 0.2.5a, July 2 2013.
+Pindel version 0.2.5a1, July 23 2013.
 
 Program:   pindel (detection of indels and structural variations)
-Pindel version 0.2.5a, July 2 2013.
+Pindel version 0.2.5a1, July 23 2013.
 Contact:   Kai Ye <kye@genome.wustl.edu>
 
 Usage:     pindel -f <reference.fa> -p <pindel_input>
@@ -22,31 +21,33 @@ Usage:     pindel -f <reference.fa> -p <pindel_input>
            -c <chromosome_name> -o <prefix_for_output_file>
 
 Required parameters:
-           -f/--fasta (provided by DNANEXUS APP INPUTS)
+
+           -f/--fasta
            the reference genome sequences in fasta format 
 
-           -p/--pindel-file (provided by DNANEXUS APP INPUTS) 
+           -p/--pindel-file
            the Pindel input file; either this, a pindel configuration file 
            (consisting of multiple pindel filenames) or a bam configuration file 
            is required 
 
-           -i/--config-file (provided by DNANEXUS APP INPUTS)
+           -i/--config-file
            the bam config file; either this, a pindel input file, or a pindel 
            config file is required. Per line: path and file name of bam, insert 
            size and sample tag.     For example: /data/tumour.bam  400  tumour 
 
-           -o/--output-prefix (provided by DNANEXUS APP INPUTS)
+           -o/--output-prefix
            Output prefix; 
 
 
 Optional parameters:
-           -P/--pindel-config-file (not supported)
+
+           -P/--pindel-config-file
            the pindel config file, containing the names of all Pindel files that 
            need to be sampled; either this, a bam config file or a pindel input 
            file is required. Per line: path and file name of pindel input. 
            Example: /data/tumour.txt 
 
-           -c/--chromosome (provided by DNANEXUS APP INPUTS)
+           -c/--chromosome
            Which chr/fragment. Pindel will process reads for one chromosome each 
            time. ChrName must be the same as in reference sequence and in read 
            file. '-c ALL' will make Pindel loop over all chromosomes. The search 
@@ -56,13 +57,13 @@ Optional parameters:
            indels in the range between and including the bases at position 
            5,000,000 and 15,000,000 = [5M, 15M]. (default ALL) 
 
-           -h/--help (not supported)
+           -h/--help
            show the command line options of Pindel 
 
            -R/--RP
            search for discordant read-pair to improve sensitivity (default true) 
 
-           -T/--number_of_threads (provided by DNANEXUS APP INPUTS)
+           -T/--number_of_threads
            the number of threads Pindel will use (default 1). 
 
            -x/--max_range_index
@@ -107,42 +108,42 @@ Optional parameters:
            genome (default 2). reads at least NM edit distance (>= NM) will be 
            realigned 
 
-           -r/--report_inversions (provided by DNANEXUS APP INPUTS)
+           -r/--report_inversions
            report inversions (default true) 
 
-           -t/--report_duplications (provided by DNANEXUS APP INPUTS)
+           -t/--report_duplications
            report tandem duplications (default true) 
 
-           -l/--report_long_insertions (provided by DNANEXUS APP INPUTS)
+           -l/--report_long_insertions
            report insertions of which the full sequence cannot be deduced 
-           because of their length (default true) 
+           because of their length (default false) 
 
-           -k/--report_breakpoints (provided by DNANEXUS APP INPUTS)
-           report breakpoints (default true) 
+           -k/--report_breakpoints
+           report breakpoints (default false) 
 
-           -s/--report_close_mapped_reads (provided by DNANEXUS APP INPUTS)
+           -s/--report_close_mapped_reads
            report reads of which only one end (the one closest to the mapped 
            read of the paired-end read) could be mapped. (default false) 
 
-           -S/--report_only_close_mapped_reads (provided by DNANEXUS APP INPUTS)
+           -S/--report_only_close_mapped_reads
            do not search for SVs, only report reads of which only one end (the 
            one closest to the mapped read of the paired-end read) could be 
            mapped (the output file can then be used as an input file for another 
            run of pindel, which may save size if you need to transfer files). 
            (default false) 
 
-           -I/--report_interchromosomal_events (provided by DNANEXUS APP INPUTS)
+           -I/--report_interchromosomal_events
            search for interchromosomal events. Note: will require the computer 
            to have at least 4 GB of memory (default true) 
 
            -C/--IndelCorrection
-           search for consensus indels to correct contigs (default false) 
+           search for consensus indels to corret contigs (default false) 
 
            -N/--NormalSamples
            Turn on germline filtering, less sensistive and you may miss somatic 
            calls (default false) 
 
-           -b/--breakdancer (provided by DNANEXUS APP INPUTS)
+           -b/--breakdancer
            Pindel is able to use calls from other SV methods such as BreakDancer 
            to further increase sensitivity and specificity.                    
            BreakDancer result or calls from any methods must in the format:   
@@ -197,7 +198,7 @@ Optional parameters:
            -g/--genotyping
            gentype variants if -i is also used. 
 
-           -Q/--output_of_breakdancer_events (not supported -- input causes pindel v.0.2.5 to segfault)
+           -Q/--output_of_breakdancer_events
            If breakdancer input is used, you can specify a filename here to 
            write the confirmed breakdancer events with their exact breakpoints 
            to The list of BreakDancer calls with Pindel support information. 

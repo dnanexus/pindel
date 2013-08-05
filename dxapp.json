@@ -1,7 +1,7 @@
 {
-  "name": "pindel",
-  "title": "Pindel",
-  "summary": "This app implements the Pindel tool (version 0.2.5a) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc). For more information about the Pindel tool, please visit http://gmt.genome.wustl.edu/pindel/0.2.4/index ",
+  "name": "pindel-0.2.5a1",
+  "title": "Pindel v.0.2.5a",
+  "summary": "This app implements the Pindel tool (version 0.2.5a1) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc).",
   "dxapi": "1.0.0",
   "version": "0.0.1",
   "categories": [
