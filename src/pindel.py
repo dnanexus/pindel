@@ -304,7 +304,6 @@ def BuildPindelCommand(kwargs, chrom, input_fn, is_pindel_input_type=False):
     if kwargs["report_only_close_mapped_reads"]:
         command_args.append("-S {option}".format(option=kwargs["report_only_close_mapped_reads"]))
     else:
-        command_args.append("-I {option}".format(option=kwargs["report_interchrom_events"]))
         command_args.append("-r {option}".format(option=kwargs["report_inversions"]))
         command_args.append("-t {option}".format(option=kwargs["report_duplications"]))
         command_args.append("-l {option}".format(option=kwargs["report_long_insertions"]))
@@ -423,37 +422,7 @@ def UploadPindelOutputs(kwargs, output_path):
         
     return app_outputs
 
-def ExportVCF(kwargs, output_path, ref_fn="reference_fasta"):
-    ref_name_version = dxpy.describe(dxpy.dxlink(kwargs["reference_fasta"]["$dnanexus_link"]))["name"]
-    ref_name_version = ref_name_version.rstrip(".fa")
-    vcf_out_fn = kwargs["output_prefix"] + '.vcf'
-    
-    command_args = ["pindel2vcf"]
-    command_args.append("-r {input}".format(input=ref_fn))
-    command_args.append("-P {input}".format(input=output_path))
-    command_args.append("-v {input}".format(input=vcf_out_fn))
-    
-    if kwargs["vcf_gatk_compatible"]:
-        command_args.append("-G")  
-         
-    if "export_vcf_advanced_options" in kwargs: 
-        command_args.append(kwargs["export_vcf_advanced_options"])
-    else: 
-        ref_date = str(datetime.date.today())
-        command_args.append("-R {input}".format(input=ref_name_version))
-        command_args.append("-d {input}".format(input=ref_date))
 
-    try:
-        vcf_command = " ".join(command_args)
-        print "Executing: " + vcf_command
-        print subprocess.check_output(vcf_command, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError, e: 
-        print e
-        print e.output
-        raise dxpy.AppError("### APP ERROR: App was not able to convert outputs to vcf")
-
-    vcf_dxlink = dxpy.dxlink(dxpy.upload_local_file(vcf_out_fn))
-    return vcf_dxlink
 
 @dxpy.entry_point("main")
 def main(**kwargs):        
@@ -471,7 +440,7 @@ def main(**kwargs):
                                   "large_inserts" :'LI',
                                   "inversions" : 'INV',
                                   "breakpoints" : 'BP',
-                                  "breakdancer_outputs": 'BD',
+                                  #"breakdancer_outputs": 'BD',
                                   "close_mapped_reads": 'CloseEndMapped'} 
     
     if kwargs["input_is_pindel"]:
@@ -479,9 +448,6 @@ def main(**kwargs):
     else:
         app_outputs = RunWithBamInput(kwargs=kwargs, mappings_ids=mappings_ids, mappings_names=mappings_names) 
 
-    if kwargs["export_vcf"]:
-        app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path)        
-    
     return app_outputs
 
 def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
@@ -495,10 +461,6 @@ def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
     output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
 
     app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
-    return app_outputs
-    if kwargs["export_vcf"]:
-        app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path)
-    
     return app_outputs
     
 def RunWithBamInput(kwargs, mappings_ids, mappings_names):  
@@ -533,7 +495,7 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
     if "chromosome" in kwargs:
         chrom = kwargs["chromosome"]
     
-    if "chromosome" in kwargs or kwargs["num_instances"] == 1 or kwargs["report_interchrom_events"]:
+    if "chromosome" in kwargs or kwargs["num_instances"] == 1:
         #Don't spawn subjobs, work straight in main job
         command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
         output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
@@ -553,10 +515,8 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
                        }
         if kwargs["report_close_mapped_reads"] or kwargs["report_only_close_mapped_reads"]:
             app_outputs["close_mapped_reads"] = {"job": postprocess_job.get_id(), "field": "close_mapped_reads"}
-        if kwargs["export_vcf"]:
-            app_outputs["vcf"] = {"job": postprocess_job.get_id(), "field": "vcf"}
-        if "breakdancer_calls_file" in kwargs:
-            app_outputs["breakdancer_outputs"] = {"job": postprocess_job.get_id(), "field": "breakdancer_outputs"}
+        #if "breakdancer_calls_file" in kwargs:
+        #    app_outputs["breakdancer_outputs"] = {"job": postprocess_job.get_id(), "field": "breakdancer_outputs"}
     
     dxlinks = []
     if need_to_sort and not kwargs["assume_sorted"]:     
@@ -625,11 +585,7 @@ def postprocess(**inputs):
         if type in need_to_renumber:
             out_fn = RenumberMergedOutput(fn, fn+"_renumbered") 
         print "\nUploading {file} as {fn}".format(file=out_fn, fn=fn) 
-        postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn, name=fn))
-    
-    if kwargs["export_vcf"]:
-        ref_fn = DownloadRefFasta(kwargs)
-        app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path)           
+        postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn, name=fn))           
 
     return postprocess_outputs
 

@@ -109,30 +109,6 @@
       "help": "Output Prefix. Default will be the name of the input file"
     },
     {
-      "name": "export_vcf",
-      "label": "Export as VCF",
-      "class": "boolean",
-      "default": true,
-      "group": "App Settings",    
-      "help": "If true, Pindel will ALSO export short insertion, deletion, inversion, and tandem duplication variants as a single VCF file. Long insertion and break point files will be returned as Pindel files (not currently supported by pindel's VCF converter). NOTE: Export GATK Compatible VCF option must also be true if you wish to use VCF files with GATK tools."
-    },
-    {
-      "name": "vcf_gatk_compatible",
-      "label": "Export GATK Compatible VCF",
-      "class": "boolean",
-      "default": false,
-      "group": "App Settings",    
-      "help": "If TRUE, VCF will also be outputted and the -G (GATK) compatibility option will be used in the pindel2vcf converter and it's possible that this format is not compatible with other VCF-reading software. Also note that GATK requires genotypes to be 0/0, 0/1 or 1/1 instead of undefined, like ./1 or . ('not detected'). However, since pindel cannot yet genotype events (distinguish between 0/1 and 1/1) all events are called as 0/0 (not found) or 0/1, even while some may very well be homozygous alternative (1/1). \nIf FALSE, the -G (GATK) compatibility option will not be used; while this allows Pindel to indicate the uncertainty in genotypes, and should be compatible with most software, this format will not be compatible with GATK pipelines and tools such as GATK ValidateVariants."
-    },
-    {
-      "name": "export_vcf_advanced_options",
-      "label": "pindel2vcf Command Line Arguments",
-      "class": "string",
-      "optional": true,
-      "group": "App Settings",
-      "help": "If provided, app will run pindel2vcf script with the command line arguments provided as input and export output as VCF file. If not provided, default options and reference genome file name will be used. Please see app page for more details on input parameters. (ex: \"[-P -r -v -G inputs provided by app] -R <required name_and_version_of_reference_genome> -d <required date_of_reference_genome_version>  [-v -c -w -mc -he ... optional parameters]\")"
-    },
-    {
       "name": "chromosome",
       "label": "Chromosome To Process",
       "class": "string",
@@ -260,21 +236,6 @@
       "optional": true,
       "help": "Output will be empty UNLESS report_close_mapped_reads or report_only_close_mapped_reads (app input) is set to true"
     },
-    {
-      "name": "breakdancer_outputs",
-      "label": "Confirmed Breakdancer Outputs",
-      "class": "file",
-      "optional": true,
-      "help": "If breakdancer input is used, a file will be returned with confirmed breakdancer events with their exact breakpoints to the list of BreakDancer calls with Pindel support information. \nFormat: chr   Loc_left   Loc_right   size   type   index. \nFor example, \"1\t72766323\t72811840\t45516\tD\t11970\" means the deletion event chr1:72766323-72811840 of size 45516 is reported as an event with index 11970 in Pindel report of deletion."
-    },    
-    {
-      "name": "vcf",
-      "label": "Pindel Variants (VCF)",
-      "class": "file",
-      "pattern": ["*.vcf"],
-      "optional": true,
-      "help": "Output will only be outputed if export_vcf is set to true. Currently pindel2vcf converter does not support large inserts and breakpoint file conversions."
-    }, 
 	{
       "name": "sortedbam_and_index_files",
       "label": "Sorted BAM Index Files",
