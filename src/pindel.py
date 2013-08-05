@@ -58,7 +58,7 @@ def SplitBamForSubjobs(kwargs, bam_names, bam_config_fn=None):
             subjob_bam_fn.append(out_fn)
 
         subjob_kwargs = kwargs.copy()
-        subjob_bam_fn, subjob_bam_idx_fn = IndexBams(subjob_bam_fn)
+        subjob_bam_fn, subjob_bam_idx_fn = IndexBams(bam_names=subjob_bam_fn)
       
         print "Uploading split bam files: " + str(subjob_bam_fn)
         subjob_bam_ids = [dxpy.dxlink(dxpy.upload_local_file(bam)) for bam in subjob_bam_fn]
@@ -81,7 +81,6 @@ def SplitBamForSubjobs(kwargs, bam_names, bam_config_fn=None):
             print "Uploading new config file: " + str(new_config_fn)
             config_dxid = dxpy.dxlink(dxpy.upload_local_file(new_config_fn))
             subjob_kwargs["bam_config_file"] = config_dxid
-        
         # Spawn new job here
         job = dxpy.new_dxjob(subjob_kwargs, "process")
         print "Started subjob #{n}: {job_id}".format(n=subjob_no, job_id=job.get_id())
@@ -180,48 +179,12 @@ def DownloadFilesFromArray(input_ids):
     print "Downloaded {files} in {min} minutes".format(files=sorted(filenames), min=float((time.time()-start_time)/60))
     return sorted(filenames)
 
-def CheckBamIdxMatch(bam_names, idx_names):
-    print "\nChecking if BAM names and index names match"
-    if len(bam_names) != len(idx_names):
-        return False
-    for i in range(len(bam_names)):
-        b = bam_names[i] 
-        i = idx_names[i]
-        if b.rstrip('.bam') != i.rstrip('.bam.bai'):
-            print "\tBAM names and index names do not match"
-            return False
-    print "\tBAM names and index names match"
-    return True
-
-def DownloadSortIndex(bam_ids, num_threads):
-    print "\nDownloading sorting and indexing BAM(s)"
-    bam_names = []
-    bam_idx_names = []
-    for id in bam_ids: 
-        start_time = time.time()
-        name = dxpy.describe(id)['name']
-        
-        stream_command = "dx download {id} -o - | samtools sort -@ {n} - {out_prefix}".format(n=num_threads, id=id["$dnanexus_link"], 
-                                                                                       out_prefix = name.rstrip('.bam'))
-        print stream_command
-        subprocess.check_call(stream_command, shell=True)
-        
-        command = "samtools index {in_bam}".format(in_bam=name)
-        print command
-        subprocess.check_call(command, shell=True)
-        
-        bam_names.append(name)
-        bam_idx_names.append(name + '.bai')
-        print "Downloaded, sorted, and indexed {bam} in {min} minutes".format(bam=name, min=float((time.time()-start_time)/60))
-    return sorted(bam_names), sorted(bam_idx_names)
-    
 def SortBams(bam_names, num_threads):
     print "\nSorting bams: " + str(bam_names)
     sorted_bam_names = []
     for bam in bam_names: 
         sorted_prefix = bam.rstrip('.bam') + '_sorted_by_app' 
         sorted_name = sorted_prefix + '.bam'
-        
         start_time = time.time()
         command = "samtools sort -@ {n} {in_bam} {out_prefix}".format(n=num_threads, in_bam=bam, out_prefix=sorted_prefix)
         print command
@@ -245,6 +208,19 @@ def IndexBams(bam_names):
         bam_idx_names.append(bam + '.bai')
     return sorted(bam_names), sorted(bam_idx_names)
         
+def CheckBamIdxMatch(bam_names, idx_names):
+    print "\nChecking if BAM names and index names match"
+    if len(bam_names) != len(idx_names):
+        return False
+    for i in range(len(bam_names)):
+        b = bam_names[i] 
+        i = idx_names[i]
+        if b.rstrip('.bam') != i.rstrip('.bam.bai'):
+            print "\tBAM names and index names do not match"
+            return False
+    print "\tBAM names and index names match"
+    return True
+
 def ValidateBamConfig(bam_config_fn, bam_name_array):
     print "\nValidating bam config file"
     with open(bam_config_fn) as config_fh:
@@ -256,7 +232,7 @@ def ValidateBamConfig(bam_config_fn, bam_name_array):
     return True
 
 def WriteConfigFile(mappings_names, fn, insert_size=0, is_pindel=False):
-    print "\nNo BAM config file was given as input. Will create BAM config file from insert size"
+    print "\nWriting BAM/Pindel config file"
     with open(fn, 'w') as config_fh: 
         for name in mappings_names: 
             if is_pindel: 
@@ -265,13 +241,12 @@ def WriteConfigFile(mappings_names, fn, insert_size=0, is_pindel=False):
                 config_fh.write("{fn}\t{insert}\t{name}\n".format(fn=name, insert=insert_size, name=name.rstrip('.bam')))    
     return fn
 
-def RunSam2Pindel(bam_names, insert_size, seq_platform, num_threads):
+def RunSam2Pindel(bam_names, insert_size, seq_platform, num_threads, config_fn):
     print "\nBAM files were not created by BWA. Converting BAM files to Pindel Input Format"
     pindel_files = []
-    pindel_fn = "output_for_pindel.txt"
     for bam in bam_names:
-        output_name = bam.rstrip('bam')+'_pindel.txt'
-        command = "samtools view -@ {n} {input} | sam2pindel -o {output} {insert} {tag} 0 {seq_platform}".format(n=num_threads,
+        output_name = bam.rstrip('.bam')+'_pindel.txt'
+        command = "samtools view -@ {n} {input} | sam2pindel - {output} {insert} {tag} 0 {seq_platform}".format(n=num_threads,
                                                                                                                  input=bam,
                                                                                                           output=output_name,
                                                                                                           insert=insert_size,
@@ -280,18 +255,17 @@ def RunSam2Pindel(bam_names, insert_size, seq_platform, num_threads):
         print command
         start_time = time.time()
         subprocess.check_call(command, shell=True)
-        
-        print "cat {fn} >> {pindel_fn}".format(fn=output_name, pindel_fn=pindel_fn)
-        subprocess.check_call("cat {fn} >> {pindel_fn}".format(fn=output_name, pindel_fn=pindel_fn), shell=True)
+        pindel_files.append(output_name)
         print "Conversion of {bam} took {min} minutes".format(bam=bam, min=float((time.time()-start_time)/60))
-    return pindel_fn
+    
+    pindel_config_fn = WriteConfigFile(mappings_names=pindel_files, fn=config_fn, is_pindel=True)
+    return pindel_config_fn
 
 def BuildPindelCommand(kwargs, chrom, input_fn, is_pindel_input_type=False):
     print "\nBuilding pindel command from app inputs"
     command_args = ["pindel"]    
     output_path = "output/" + kwargs["output_prefix"]
     
-    # Always input -p/-i -T -o and -f (before running)
     if is_pindel_input_type: 
         command_args.append("-P {pindel_input_file}".format(pindel_input_file=input_fn))
     else:
@@ -422,8 +396,6 @@ def UploadPindelOutputs(kwargs, output_path):
         
     return app_outputs
 
-
-
 @dxpy.entry_point("main")
 def main(**kwargs):        
     mappings_ids = [dxpy.dxlink(file["$dnanexus_link"]) for file in kwargs["mappings_files"]]
@@ -432,7 +404,6 @@ def main(**kwargs):
     # Set output prefix here
     if "output_prefix" not in kwargs:
         kwargs["output_prefix"] = mappings_names[0].rstrip('.bam').rstrip('.txt')
-    
     # Set output suffixes (for consistency through app) 
     kwargs["variant_suffixes"] = {"deletions" : 'D',
                                   "short_inserts" : 'SI', 
@@ -451,8 +422,7 @@ def main(**kwargs):
     return app_outputs
 
 def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
-    print "\nInput is pindel input. Making pindel configuration file"
-    
+    print "\nInput is pindel input. Making pindel configuration file" 
     pindel_config_fn = "pindel_config.txt"     
     pindel_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=pindel_config_fn,  is_pindel=True)   
     mappings_names = DownloadFilesFromArray(input_ids=mappings_ids)
@@ -464,16 +434,19 @@ def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
     return app_outputs
     
 def RunWithBamInput(kwargs, mappings_ids, mappings_names):  
+    num_threads = kwargs["num_threads_per_instance"]
     bam_config_fn = "bam_config.txt"
+    pindel_config_fn = "pindel_config.txt"
+    
     if "bam_config_file" in kwargs:
         print "\nInput has a BAM config file. Need to download and validate bam config file"
         dxpy.download_dxfile(kwargs["bam_config_file"], bam_config_fn)
         ValidateBamConfig(bam_config_fn=bam_config_fn, bam_name_array=mappings_names)
     else:
         if "insert_size" not in kwargs:
-            raise dxpy.AppError("Input files were not specified to be Pindel input files, but neither a bam configuration file, nor an insert size was given as an app input.") 
-        else:
-            bam_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=bam_config_fn,  insert_size=kwargs["insert_size"])
+            raise dxpy.AppError("Input files were not specified to be Pindel input files, but neither a bam configuration file, nor an insert size was given as an app input.")
+        if not kwargs["bam_not_produced_by_bwa"]:
+            bam_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=bam_config_fn,  insert_size=kwargs["insert_size"])   
         
     need_to_sort=True
     if "bam_index_files" in kwargs:
@@ -483,24 +456,26 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
             need_to_sort = False
             mappings_names = DownloadFilesFromArray(mappings_ids)
             bam_idx_names = DownloadFilesFromArray(bam_idx_ids)
-    
     if need_to_sort:
-        if kwargs["assume_sorted"]:
-            mappings_names = DownloadFilesFromArray(mappings_ids)
-            mappings_names, bam_idx_names = IndexBams(mappings_names)
-        else:
-            mappings_names, bam_idx_names = DownloadSortIndex(bam_ids=mappings_ids, num_threads=kwargs["num_threads_per_instance"]) 
+        mappings_names = DownloadFilesFromArray(mappings_ids)
+        if not kwargs["assume_sorted"]:
+            mappings_names = SortBams(mappings_names=mappings_names, num_threads=num_threads)
+        mappings_names, bam_idx_names = IndexBams(bam_names=mappings_names) 
     
     chrom = "ALL"
     if "chromosome" in kwargs:
         chrom = kwargs["chromosome"]
     
-    if "chromosome" in kwargs or kwargs["num_instances"] == 1:
+    if kwargs["bam_not_produced_by_bwa"]:
+        pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
+        command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
+        output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
+        app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
+    elif "chromosome" in kwargs or kwargs["num_instances"] == 1:
         #Don't spawn subjobs, work straight in main job
         command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
         output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
         app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
-
     else: 
         subjob_ids = SplitBamForSubjobs(kwargs, mappings_names, bam_config_fn)
         postprocess_inputs = {"subjob_outputs": [job.get_output_ref("subjob_output") for job in subjob_ids], "kwargs": kwargs}
@@ -579,7 +554,7 @@ def postprocess(**inputs):
             app_output_fn[type] = filename
 
     postprocess_outputs = {}
-    need_to_renumber = ["deletions", "short_inserts", "tandem_duplications", "inversions"]
+    need_to_renumber = ["deletions", "short_inserts", "tandem_duplications", "inversions", "large_inserts"]
     for type, fn in app_output_fn.iteritems():
         out_fn = fn
         if type in need_to_renumber:
