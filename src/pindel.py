@@ -448,9 +448,8 @@ def main(**kwargs):
     
     if kwargs["export_vcf"]:
         print "\nTESTING pindel2vcf command line inputs on dummy inputs"
-        vcf_fn = ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")
-        subprocess.check_call("rm {vcf}".format(vcf=vcf_fn), shell=True)    
-    
+        ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")
+
     if kwargs["input_is_pindel"]:
         app_outputs = RunWithPindelInput(kwargs=kwargs, mappings_ids=mappings_ids, mappings_names=mappings_names)
     else:
