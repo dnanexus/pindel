@@ -511,19 +511,19 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
         run_single_threaded = True
 
     if run_single_threaded:        
-        if "bam_config_file" in kwargs:
-            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
         if kwargs["bam_not_produced_by_bwa"]: 
             if "sequence_plaform" not in kwargs:
                 raise dxpy.AppError("If BAM files were not produced by BWA, must ALSO specify which sequence platform was used to produce the mappings")
             pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
             command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
         else: 
-            raise dxpy.AppError("Please provide the input combinations specified in the app README")
+            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
+        
         output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
         app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
         if kwargs["export_vcf"]:
             app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path, ref_fn="reference_fasta")   
+   
     else: 
         subjob_ids = SplitBamForSubjobs(kwargs, mappings_names, bam_config_fn)
         postprocess_inputs = {"subjob_outputs": [job.get_output_ref("subjob_output") for job in subjob_ids], "kwargs": kwargs}
