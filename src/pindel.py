@@ -447,8 +447,9 @@ def main(**kwargs):
                                   "close_mapped_reads": 'CloseEndMapped'} 
     
     if kwargs["export_vcf"]:
-        print "\nTesting pindel2vcf command line inputs"
-        ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")    
+        print "\nTESTING pindel2vcf command line inputs on dummy inputs"
+        vcf_fn = ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")
+        subprocess.check_call("rm {vcf}".format(vcf=vcf_fn), shell=True)    
     
     if kwargs["input_is_pindel"]:
         app_outputs = RunWithPindelInput(kwargs=kwargs, mappings_ids=mappings_ids, mappings_names=mappings_names)
@@ -497,10 +498,11 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
             need_to_sort = False
             mappings_names = DownloadFilesFromArray(mappings_ids)
             bam_idx_names = DownloadFilesFromArray(bam_idx_ids)
+            
     if need_to_sort:
         mappings_names = DownloadFilesFromArray(mappings_ids)
         if not kwargs["assume_sorted"]:
-            mappings_names = SortBams(mappings_names=mappings_names, num_threads=num_threads)
+            mappings_names = SortBams(bam_names=mappings_names, num_threads=num_threads)
         mappings_names, bam_idx_names = IndexBams(bam_names=mappings_names) 
     
     chrom = kwargs["chromosome"] if "chromosome" in kwargs else "ALL"
@@ -510,11 +512,15 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
         run_single_threaded = True
 
     if run_single_threaded:        
-        if kwargs["bam_not_produced_by_bwa"]:
+        if "bam_config_file" in kwargs:
+            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
+        if kwargs["bam_not_produced_by_bwa"]: 
+            if "sequence_plaform" not in kwargs:
+                raise dxpy.AppError("If BAM files were not produced by BWA, must ALSO specify which sequence platform was used to produce the mappings")
             pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
             command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
         else: 
-            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
+            raise dxpy.AppError("Please provide the input combinations specified in the app README")
         output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
         app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
         if kwargs["export_vcf"]:
