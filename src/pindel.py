@@ -512,7 +512,7 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
 
     if run_single_threaded:        
         if kwargs["bam_not_produced_by_bwa"]: 
-            if "sequence_plaform" not in kwargs:
+            if "sequence_platform" not in kwargs:
                 raise dxpy.AppError("If BAM files were not produced by BWA, must ALSO specify which sequence platform was used to produce the mappings")
             pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
             command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
