@@ -427,6 +427,7 @@ def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
     pindel_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=pindel_config_fn,  is_pindel=True)   
     mappings_names = DownloadFilesFromArray(input_ids=mappings_ids)
     
+    chrom = kwargs["chromosome"] if "chromosome" in kwargs else "ALL"
     command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
     output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
 
@@ -462,9 +463,7 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
             mappings_names = SortBams(mappings_names=mappings_names, num_threads=num_threads)
         mappings_names, bam_idx_names = IndexBams(bam_names=mappings_names) 
     
-    chrom = "ALL"
-    if "chromosome" in kwargs:
-        chrom = kwargs["chromosome"]
+    chrom = kwargs["chromosome"] if "chromosome" in kwargs else "ALL"
     
     if kwargs["bam_not_produced_by_bwa"]:
         pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
