@@ -6,7 +6,7 @@ import os, subprocess, time, datetime, re
 import dxpy
 
 def ExportVCF(kwargs, output_path, ref_fn):
-    ref_name_version = dxpy.describe(dxpy.dxlink(kwargs["reference_fasta"]["$dnanexus_link"]))["name"]
+    ref_name_version = dxpy.describe(kwargs["reference_fasta"])["name"]
     ref_name_version = ref_name_version.rstrip(".fa")
     vcf_out_fn = kwargs["output_prefix"] + '.vcf'
     
@@ -14,10 +14,9 @@ def ExportVCF(kwargs, output_path, ref_fn):
     command_args.append("-r {input}".format(input=ref_fn))
     command_args.append("-P {input}".format(input=output_path))
     command_args.append("-v {input}".format(input=vcf_out_fn))
-    
     if kwargs["vcf_gatk_compatible"]:
         command_args.append("-G")  
-         
+
     if "export_vcf_advanced_options" in kwargs: 
         command_args.append(kwargs["export_vcf_advanced_options"])
     else: 
@@ -80,9 +79,8 @@ def SplitBamForSubjobs(kwargs, bam_names, bam_config_fn=None):
             
             command = "samtools view -@ {n} -bh {bam} {group} > tmp.bam".format(n=num_threads, bam=bam, group=group)
             subprocess.check_call(command, shell=True)
-            split_command = "samtools merge -@ {n} {out} {unmapped} tmp.bam ".format(n=num_threads,
-                                                                                     out=out_fn,
-                                                                                     unmapped=unmapped[bam])
+            
+            split_command = "samtools merge -@ {n} {out} {unmapped} tmp.bam ".format(n=num_threads, out=out_fn, unmapped=unmapped[bam])
             print split_command
             subprocess.check_call(split_command, shell=True)
             
@@ -111,9 +109,8 @@ def SplitBamForSubjobs(kwargs, bam_names, bam_config_fn=None):
                     write_fh.write(out_fn + '\t' + "\t".join(line[1:]) + '\n')      
             
             print "Uploading new config file: " + str(new_config_fn)
-            config_dxid = dxpy.dxlink(dxpy.upload_local_file(new_config_fn))
-            subjob_kwargs["bam_config_file"] = config_dxid
-        # Spawn new job here
+            subjob_kwargs["bam_config_file"] = dxpy.dxlink(dxpy.upload_local_file(new_config_fn))
+    
         job = dxpy.new_dxjob(subjob_kwargs, "process")
         print "Started subjob #{n}: {job_id}".format(n=subjob_no, job_id=job.get_id())
         subjobs.append(job)
@@ -152,8 +149,7 @@ def SplitGenomeFromSam(header, splits):
     print "\n" + str(groups)
     return groups
 
-def DownloadRefFasta(kwargs, ref_fn="reference_fasta"):
-    reference_fasta_id = dxpy.dxlink(kwargs["reference_fasta"]["$dnanexus_link"])
+def DownloadRefFasta(reference_fasta_id, ref_fn="reference_fasta"):
     dxpy.download_dxfile(reference_fasta_id, ref_fn)
     UnpackInput(ref_fn)
     return ref_fn
@@ -203,6 +199,7 @@ def DownloadFilesFromArray(input_ids):
     if len(input_ids) < 1:
         raise dxpy.AppInternalError("No files were given as input")
     filenames = []
+    
     start_time = time.time()
     for id in input_ids:
         fn = dxpy.describe(id)["name"]
@@ -245,9 +242,7 @@ def CheckBamIdxMatch(bam_names, idx_names):
     if len(bam_names) != len(idx_names):
         return False
     for i in range(len(bam_names)):
-        b = bam_names[i] 
-        i = idx_names[i]
-        if b.rstrip('.bam') != i.rstrip('.bam.bai'):
+        if bam_names[i].rstrip('.bam') != idx_names[i].rstrip('.bam.bai'):
             print "\tBAM names and index names do not match"
             return False
     print "\tBAM names and index names match"
@@ -294,17 +289,33 @@ def RunSam2Pindel(bam_names, insert_size, seq_platform, num_threads, config_fn):
     return pindel_config_fn
 
 def BuildPindelCommand(kwargs, chrom, input_fn, is_pindel_input_type=False):
+    # Download Reference FASTA
+    reference_fasta_id = kwargs["reference_fasta"]
+    ref_fn = DownloadRefFasta(reference_fasta_id)
+    
+    create_index = True
+    if "fasta_index" in kwargs:
+        fasta_idx_id = kwargs["fasta_index"]
+        if dxpy.describe(fasta_idx_id)["name"].rstrip(".fa.fai") ==  dxpy.describe(reference_fasta_id)["name"].rstrip(".fa"):
+            dxpy.download_dxfile(fasta_idx_id, ref_fn+".fai")
+            create_index = False
+    if create_index: 
+        print "No FASTA index was provided as input. Making one now."
+        samtools_command = "samtools faidx {fasta}".format(fasta=ref_fn)
+        subprocess.check_call(samtools_command, shell=True)
+    
     print "\nBuilding pindel command from app inputs"
     command_args = ["pindel"]    
     output_path = "output/" + kwargs["output_prefix"]
+    command_args.append("-o {output_path}".format(output_path=output_path))
+    command_args.append("-f {fa}".format(fa=ref_fn))
     
     if is_pindel_input_type: 
-        command_args.append("-P {pindel_input_file}".format(pindel_input_file=input_fn))
+        command_args.append("-P {pindel_config}".format(pindel_config=input_fn))
     else:
         command_args.append("-i {bam_config}".format(bam_config=input_fn))
         
     command_args.append("-T {option}".format(option=kwargs["num_threads_per_instance"]))
-    command_args.append("-o {output_path}".format(output_path=output_path))
     command_args.append("-c {chrom}".format(chrom=chrom))
     
     if kwargs["report_only_close_mapped_reads"]:
@@ -332,24 +343,6 @@ def BuildPindelCommand(kwargs, chrom, input_fn, is_pindel_input_type=False):
     return command, output_path
 
 def RunPindel(kwargs, pindel_command, output_path):   
-    ref_fn = DownloadRefFasta(kwargs)
-    pindel_command += " -f " + ref_fn
-
-    if "fasta_index" in kwargs:
-        reference_fasta_id = dxpy.dxlink(kwargs["reference_fasta"]["$dnanexus_link"])
-        fasta_idx_id = dxpy.dxlink(kwargs["fasta_index"]["$dnanexus_link"])
-        if dxpy.describe(fasta_idx_id)["name"].rstrip(".fa.fai") ==  dxpy.describe(reference_fasta_id)["name"].rstrip(".fa"):
-            print dxpy.describe(fasta_idx_id)["name"]
-            dxpy.download_dxfile(fasta_idx_id, ref_fn+".fai")
-    else: 
-        print "No FASTA index was provided as input. Making one now."
-        samtools_command = "samtools faidx {fasta}".format(fasta=ref_fn)
-        subprocess.check_call(samtools_command, shell=True)
-        
-    if "optional_files" in kwargs: 
-        file_ids = [dxpy.dxlink(file["$dnanexus_link"]) for file in kwargs["optional_files"]]
-        file_names = DownloadFilesFromArray(file_ids)
-    
     folder = output_path.split("/")[0]
     print "Making folder for output: " + str(folder)
     os.mkdir(folder)
@@ -369,15 +362,7 @@ def RunPindel(kwargs, pindel_command, output_path):
         print "\n" + str(e.output)
         raise dxpy.AppError("Pindel failed to run. Please check job logs for pindel output. If error is a segmentation fault " +
                             "raised as pindel begins to run, check that reference FASTA file is the same reference used to produce the mappings")
-
-    if kwargs["report_only_close_mapped_reads"]:
-        print "\nReporting only close mapped reads, need to write empty files for the other outputs"
-        for type, suffix in kwargs["variant_suffixes"].iteritems():
-            filename = output_path + "_" + suffix
-            print "\tWriting " + filename
-            with open(filename, 'w') as fh:
-                fh.write("")
- 
+        
     return output_path
 
 def UploadPindelOutputs(kwargs, output_path):
@@ -430,7 +415,7 @@ def UploadPindelOutputs(kwargs, output_path):
 
 @dxpy.entry_point("main")
 def main(**kwargs):        
-    mappings_ids = [dxpy.dxlink(file["$dnanexus_link"]) for file in kwargs["mappings_files"]]
+    mappings_ids = kwargs["mappings_files"]
     mappings_names = sorted([dxpy.describe(id)["name"] for id in mappings_ids])
     
     # Set output prefix here
@@ -450,34 +435,47 @@ def main(**kwargs):
         print "\nTESTING pindel2vcf command line inputs on dummy inputs"
         ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")
 
-    if kwargs["input_is_pindel"]:
-        app_outputs = RunWithPindelInput(kwargs=kwargs, mappings_ids=mappings_ids, mappings_names=mappings_names)
+    # Check if input files have .bam extension
+    if mappings_names[0][-4:] == ".bam":
+        for name in mappings_names:
+            if name[-4:] != ".bam":
+                raise dxpy.AppError("Input mappings files are not all bam files with .bam extensions")
+        app_outputs = RunWithBamInput(kwargs=kwargs) 
     else:
-        app_outputs = RunWithBamInput(kwargs=kwargs, mappings_ids=mappings_ids, mappings_names=mappings_names) 
- 
+        app_outputs = RunWithPindelInput(kwargs=kwargs, sam2pindel=False)
+        
     return app_outputs
 
-def RunWithPindelInput(kwargs, mappings_ids, mappings_names):
-    print "\nInput is pindel input. Making pindel configuration file" 
-    pindel_config_fn = "pindel_config.txt"     
-    pindel_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=pindel_config_fn,  is_pindel=True)   
-    mappings_names = DownloadFilesFromArray(input_ids=mappings_ids)
+def RunWithPindelInput(kwargs, sam2pindel=False):
+    pindel_config_fn="pindel_config.txt"
+    mappings_names = DownloadFilesFromArray(input_ids=kwargs["mappings_files"])
     
+    if sam2pindel:
+        print "\nInput was not produced by BWA/MOSAIK, running sam2pindel script on input BAM files"
+        if "sequence_platform" not in kwargs:
+            raise dxpy.AppError("If BAM files were not produced by BWA, must ALSO specify which sequence platform was used to produce the mappings")
+        pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], 
+                                         seq_platform=kwargs["sequence_platform"], num_threads=kwargs["num_threads_per_instance"], 
+                                         config_fn=pindel_config_fn)
+    else:
+        print "\nInput is pindel input. Making pindel configuration file" 
+        pindel_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=pindel_config_fn, is_pindel=True)   
+
     chrom = kwargs["chromosome"] if "chromosome" in kwargs else "ALL"
     command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
     output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
 
     app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
-    
     if kwargs["export_vcf"]:
         app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path, ref_fn="reference_fasta")   
     
     return app_outputs
     
-def RunWithBamInput(kwargs, mappings_ids, mappings_names):  
+def RunWithBamInput(kwargs):  
+    mappings_ids = kwargs["mappings_files"]
+    mappings_names = sorted([dxpy.describe(id)["name"] for id in mappings_ids])
     num_threads = kwargs["num_threads_per_instance"]
     bam_config_fn = "bam_config.txt"
-    pindel_config_fn = "pindel_config.txt"
     
     if "bam_config_file" in kwargs:
         print "\nInput has a BAM config file. Need to download and validate bam config file"
@@ -485,45 +483,36 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
         ValidateBamConfig(bam_config_fn=bam_config_fn, bam_name_array=mappings_names)
     else:
         if "insert_size" not in kwargs:
-            raise dxpy.AppError("Input files were not specified to be Pindel input files, but neither a bam configuration file, nor an insert size was given as an app input.")
-        if not kwargs["bam_not_produced_by_bwa"]:
+            raise dxpy.AppError("Input files are bam files but neither a bam configuration file, nor an insert size was given as an app input.")
+        if kwargs["bam_not_produced_by_bwa"]:
+            return RunWithPindelInput(kwargs, sam2pindel=True)
+        else:
             bam_config_fn = WriteConfigFile(mappings_names=mappings_names, fn=bam_config_fn,  insert_size=kwargs["insert_size"])   
         
-    need_to_sort=True
+    need_to_index=True
     if "bam_index_files" in kwargs:
-        bam_idx_ids = [dxpy.dxlink(idx["$dnanexus_link"]) for idx in kwargs["bam_index_files"]]
+        bam_idx_ids = kwargs["bam_index_files"]
         idx_names = sorted([dxpy.describe(id)["name"] for id in bam_idx_ids])
         if CheckBamIdxMatch(bam_names=mappings_names, idx_names=idx_names):
-            need_to_sort = False
+            need_to_index = False
             mappings_names = DownloadFilesFromArray(mappings_ids)
             bam_idx_names = DownloadFilesFromArray(bam_idx_ids)
             
-    if need_to_sort:
+    if need_to_index:
         mappings_names = DownloadFilesFromArray(mappings_ids)
         if not kwargs["assume_sorted"]:
             mappings_names = SortBams(bam_names=mappings_names, num_threads=num_threads)
-        mappings_names, bam_idx_names = IndexBams(bam_names=mappings_names) 
+        mappings_names, bam_idx_names = IndexBams(mappings_names) 
     
     chrom = kwargs["chromosome"] if "chromosome" in kwargs else "ALL"
     
-    run_single_threaded = False
-    if kwargs["bam_not_produced_by_bwa"] or "chromosome" in kwargs or kwargs["num_instances"] == 1:
-        run_single_threaded = True
-
-    if run_single_threaded:        
-        if kwargs["bam_not_produced_by_bwa"]: 
-            if "sequence_platform" not in kwargs:
-                raise dxpy.AppError("If BAM files were not produced by BWA, must ALSO specify which sequence platform was used to produce the mappings")
-            pindel_config_fn = RunSam2Pindel(bam_names=mappings_names, insert_size=kwargs["insert_size"], seq_platform=kwargs["sequence_platform"], num_threads=num_threads, config_fn=pindel_config_fn)
-            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=pindel_config_fn, is_pindel_input_type=True)
-        else: 
-            command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
-        
-        output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)
+    if "chromosome" in kwargs or kwargs["num_instances"] == 1:        
+        command, output_path = BuildPindelCommand(kwargs=kwargs, chrom=chrom, input_fn=bam_config_fn, is_pindel_input_type=False)
+        output_path = RunPindel(kwargs=kwargs, pindel_command=command, output_path=output_path)    
         app_outputs = UploadPindelOutputs(kwargs=kwargs, output_path=output_path)
         if kwargs["export_vcf"]:
             app_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_path, ref_fn="reference_fasta")   
-   
+
     else: 
         subjob_ids = SplitBamForSubjobs(kwargs, mappings_names, bam_config_fn)
         postprocess_inputs = {"subjob_outputs": [job.get_output_ref("subjob_output") for job in subjob_ids], "kwargs": kwargs}
@@ -544,15 +533,11 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
         #    app_outputs["breakdancer_outputs"] = {"job": postprocess_job.get_id(), "field": "breakdancer_outputs"}
     
     dxlinks = []
-    if need_to_sort and not kwargs["assume_sorted"]:     
-        for bam in mappings_names:
-            uploaded_bam = dxpy.upload_local_file(bam, name=bam.rstrip('.bam')+"_sorted.bam")
-            dxlinks.append(dxpy.dxlink(uploaded_bam))
-        for idx in bam_idx_names:
-            uploaded_idx = dxpy.upload_local_file(idx, name=idx.rstrip('.bam.bai')+"_sorted.bam.bai")
-            dxlinks.append(dxpy.dxlink(uploaded_idx))
-        app_outputs["sortedbam_and_index_files"] = dxlinks
-    elif need_to_sort and kwargs["assume_sorted"]: 
+    if need_to_index:
+        if not kwargs["assume_sorted"]:
+            for bam in mappings_names:
+                uploaded_bam = dxpy.upload_local_file(bam, name=bam.rstrip('.bam')+"_sorted.bam")
+                dxlinks.append(dxpy.dxlink(uploaded_bam))
         for idx in bam_idx_names:
             uploaded_idx = dxpy.upload_local_file(idx, name=idx.rstrip('.bam.bai')+"_sorted.bam.bai")
             dxlinks.append(dxpy.dxlink(uploaded_idx))
@@ -562,11 +547,8 @@ def RunWithBamInput(kwargs, mappings_ids, mappings_names):
 
 @dxpy.entry_point("process")
 def process(**kwargs):
-    bam_ids = [dxpy.dxlink(bam["$dnanexus_link"]) for bam in kwargs["mappings_files"]]
-    bam_idx_ids = [dxpy.dxlink(idx["$dnanexus_link"]) for idx in kwargs["bam_index_files"]]
-    
-    bam_names = DownloadFilesFromArray(bam_ids)
-    bam_idx_names = DownloadFilesFromArray(bam_idx_ids)
+    bam_names = DownloadFilesFromArray(kwargs["mappings_files"])
+    bam_idx_names = DownloadFilesFromArray(kwargs["bam_index_files"])
     
     # Change name of subjob outputs for easy debugging
     kwargs["output_prefix"] = bam_names[0].rstrip('.bam')
@@ -587,8 +569,7 @@ def process(**kwargs):
 def postprocess(**inputs):
     kwargs = inputs["kwargs"]
     subjob_outputs = inputs["subjob_outputs"] 
-    num_subjobs = len(subjob_outputs)
-    print "\nMerging outputs from {n} subjobs".format(n=num_subjobs)
+    print "\nMerging outputs from {n} subjobs".format(n=len(subjob_outputs))
 
     output_prefix = kwargs["output_prefix"]
     variant_suffixes = kwargs["variant_suffixes"]
@@ -613,8 +594,9 @@ def postprocess(**inputs):
         postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn, name=fn))           
 
     if kwargs["export_vcf"]:
-        DownloadRefFasta(kwargs, ref_fn="reference_fasta")
+        DownloadRefFasta(kwargs["reference_fasta"])
         postprocess_outputs["vcf"] = ExportVCF(kwargs=kwargs, output_path=output_prefix, ref_fn="reference_fasta") 
+        
     return postprocess_outputs
 
 print dxpy.run()
