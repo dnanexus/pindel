@@ -3,9 +3,9 @@
   "title": "Pindel",
   "summary": "This app implements the Pindel tool (version 0.2.4t) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc). For more information about the Pindel tool, please visit http://gmt.genome.wustl.edu/pindel/0.2.4/index ",
   "dxapi": "1.0.0",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "categories": [
-    "Variation Calling"
+    "Structural Variation"
   ],
   "inputSpec": [
     {
@@ -271,5 +271,16 @@
   "runSpec": {
     "interpreter": "python2.7",
     "file": "src/pindel.py"
+  },
+  "details": {
+    "contactOrgs": ["org-dnanexus"],
+    "repoUrl": "git@github.com:dnanexus:pindel.git",
+    "upstreamAuthor": "Kai Ye",
+    "upstreamUrl": "https://github.com/genome/pindel/",
+    "upstreamVersion": "0.2.4t (commit 24165c6)",
+    "upstreamLicences": ["GPLv3"],
+    "citations": [
+      "doi: 10.1093/bioinformatics/btp394"
+    ]
   }
 }
