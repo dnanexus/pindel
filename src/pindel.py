@@ -604,10 +604,8 @@ def postprocess(**inputs):
         out_fn = fn
         if type in need_to_renumber:
             out_fn = RenumberMergedOutput(fn, fn+"_renumbered") 
-        print "\nCompressing {file} as {file}.gz".format(file=out_fn)
-        subprocess.check_call(["gzip", out_fn])
-        print "\nUploading {file}.gz as {fn}.gz".format(file=out_fn, fn=fn)
-        postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn+".gz", name=fn+".gz"))
+        print "\nUploading {file} as {fn}".format(file=out_fn, fn=fn)
+        postprocess_outputs[type] = dxpy.dxlink(dxpy.upload_local_file(out_fn, name=fn))
 
     if kwargs["export_vcf"]:
         DownloadRefFasta(kwargs["reference_fasta"])
