@@ -282,5 +282,14 @@
     "citations": [
       "doi: 10.1093/bioinformatics/btp394"
     ]
-  }
+  },
+  "authorizedUsers": [
+    "user-sma",
+    "user-sma_baylor",
+    "user-acarroll",
+    "user-acarroll_baylor",
+    "user-ambreth_9",
+    "user-narayananv",
+    "org-bcm"
+  ]
 }
