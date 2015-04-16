@@ -15,7 +15,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 
 SV=0.1.19
-PV=0.2.4t
+PV=0.2.5a7
 
 all: samtools pindel
 

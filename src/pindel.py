@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os, subprocess, time, datetime, re
+import os, subprocess, time, datetime, re, multiprocessing
 import dxpy
 
 def ExportVCF(kwargs, output_path, ref_fn):
@@ -432,6 +432,11 @@ def main(**kwargs):
     mappings_ids = kwargs["mappings_files"]
     mappings_names = sorted([dxpy.describe(id)["name"] for id in mappings_ids])
     
+    if "num_threads_per_instance" not in kwargs:
+        kwargs["num_threads_per_instance"] = multiprocessing.cpu_count()
+    if "num_instances" not in kwargs:
+        kwargs["num_instances"] = 1
+
     # Set output prefix here
     if "output_prefix" not in kwargs:
         kwargs["output_prefix"] = mappings_names[0].rstrip('.bam').rstrip('.txt')
@@ -570,6 +575,7 @@ def process(**kwargs):
     bam_config_fn = "bam_config.txt"
     if "bam_config_file" in kwargs:
        dxpy.download_dxfile(kwargs["bam_config_file"], bam_config_fn)
+
 
     # Run Pindel on all chromosomes in BAM and upload outputs
     chrom = "ALL"

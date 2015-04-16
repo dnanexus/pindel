@@ -3,7 +3,7 @@
   "title": "Pindel",
   "summary": "This app implements the Pindel tool (version 0.2.4t) for detection of structural variants (large deletions, medium sized insertions, inversions, tandem duplications, etc). For more information about the Pindel tool, please visit http://gmt.genome.wustl.edu/pindel/0.2.4/index ",
   "dxapi": "1.0.0",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "categories": [
     "Structural Variation"
   ],
@@ -112,7 +112,7 @@
       "name": "num_instances",
       "label": "Number of Instances",
       "class": "int",
-      "default": 1,
+      "optional": true,
       "group": "App Settings",
       "help": "The number of subjobs Pindel can be split into. More threads assures lower runtime, but will spawn new instances. NOTE: If report_interchrom_events is True (default behavior) or only one chromosome or region is specified in 'chromosome' input, Pindel will only run on one instance regardless of input."
     },
@@ -120,7 +120,7 @@
       "name": "num_threads_per_instance",
       "label": "Number of Threads",
       "class": "int",
-      "default": 1,
+      "optional": true,
       "group": "App Settings",
       "help": "The number threads per instance that Pindel will run. More threads assures lower runtime but will not guarantee same results."
     },   
@@ -270,14 +270,19 @@
   ],
   "runSpec": {
     "interpreter": "python2.7",
-    "file": "src/pindel.py"
+    "file": "src/pindel.py",
+    "systemRequirements": {
+      "main": {
+        "instanceType": "dx_m2.2xlarge"
+      }
+    }
   },
   "details": {
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus:pindel.git",
     "upstreamAuthor": "Kai Ye",
     "upstreamUrl": "https://github.com/genome/pindel/",
-    "upstreamVersion": "0.2.4t (commit 24165c6)",
+    "upstreamVersion": "0.2.5a7 (commit 884fb3d)",
     "upstreamLicences": ["GPLv3"],
     "citations": [
       "doi: 10.1093/bioinformatics/btp394"
