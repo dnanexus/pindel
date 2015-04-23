@@ -22,7 +22,7 @@ import dxpy
 def ExportVCF(kwargs, output_path, ref_fn):
     ref_name_version = dxpy.describe(kwargs["reference_fasta"])["name"]
     ref_name_version = ref_name_version.rstrip(".fa")
-    vcf_out_fn = kwargs["output_prefix"] + '.vcf'
+    vcf_out_fn = kwargs["output_prefix"] + '.pindel.vcf'
     
     command_args = ["pindel2vcf"]
     command_args.append("-r {input}".format(input=ref_fn))
@@ -449,11 +449,11 @@ def main(**kwargs):
                                   "breakpoints" : 'BP',
                                   #"breakdancer_outputs": 'BD',
                                   "close_mapped_reads": 'CloseEndMapped'} 
-    
+    """
     if kwargs["export_vcf"]:
         print "\nTESTING pindel2vcf command line inputs on dummy inputs"
         ExportVCF(kwargs, output_path="/usr/test_vcf/dummy", ref_fn="/usr/test_vcf/dummy.fa")
-
+    """
     # Check if input files have .bam extension
     if mappings_names[0][-4:] == ".bam":
         for name in mappings_names:
